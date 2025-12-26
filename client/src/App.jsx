@@ -11,6 +11,9 @@ const socket = io(BACKEND_URL);
 function App() {
   const [tasks, setTasks] = useState([]);
   const [form, setForm] = useState({ title: '', contact: '' });
+  
+  // 搜索关键词状态
+  const [searchTerm, setSearchTerm] = useState(''); 
 
   useEffect(() => {
     socket.emit('request_active_tasks');
@@ -55,12 +58,19 @@ function App() {
       }
     } catch (e) { alert("网络错误"); }
   };
-
+  
+  // 过滤逻辑 (核心)
+  // 只要标题里包含了搜索词（不区分大小写），就留下来
+  const filteredTasks = tasks.filter(task => {
+    if (!searchTerm) return true; // 没搜东西显示全部
+    return task.title.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+  
   return (
     <div className="min-h-screen bg-slate-900 text-white p-4 font-sans">
       <div className="max-w-md mx-auto">
         <h1 className="text-3xl font-black mb-6 text-center text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600">
-          ⚡ 闪电搭子
+          咔哒 ⚡ 闪电搭子
         </h1>
         
         {/* 发布框 */}
@@ -85,9 +95,36 @@ function App() {
           </button>
         </div>
 
+        {/* 搜索框区域 */}
+        <div className="mb-4 relative sticky top-2 z-50 shadow-lg">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            {/* 放大镜图标 */}
+            <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input 
+            type="text"
+            className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-full text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+            placeholder="🔍 搜大区、模式... (例: 黑色玫瑰)"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          {/* 如果有内容，显示清空按钮 */}
+          {searchTerm && (
+            <button 
+              onClick={() => setSearchTerm('')}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-white"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+
         {/* 任务列表 */}
         <div className="space-y-4">
-          {tasks.map(task => {
+          {filteredTasks.map(task => {
             const timeLeft = Math.max(0, Math.floor((task.expiresAt - now) / 1000));
             if (timeLeft === 0) return null; // 前端双重过滤
 
@@ -108,9 +145,9 @@ function App() {
               </div>
             )
           })}
-          {tasks.length === 0 && (
+          {filteredTasks.length === 0 && (
             <div className="text-center text-slate-500 py-10">
-              这里空空如也...<br/>大家都在潜水吗？
+              {searchTerm ? `没有找到 "${searchTerm}" 相关的搭子` : '这里空空如也...'}
             </div>
           )}
         </div>
