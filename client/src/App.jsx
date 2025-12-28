@@ -133,7 +133,7 @@ function App() {
         {/* 顶部栏：标题 + 问号按钮 */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600">
-            ⚡ 闪电搭子
+            咔哒 ⚡ 闪电搭子
           </h1>
           {/* 3. 再看一遍的按钮 */}
           <button 
