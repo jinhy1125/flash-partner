@@ -16,6 +16,11 @@ function App() {
   // === 新增：控制介绍框的显示状态 ===
   const [showIntro, setShowIntro] = useState(false);
 
+  // === 新增/修改：抢单结果状态 ===
+  const [grabResult, setGrabResult] = useState(null); // 存放抢到的联系方式，null表示没抢
+  const [isCopied, setIsCopied] = useState(false);    // 控制“已复制”的提示文字
+
+
   // === 1. 初始化逻辑：检查用户是不是第一次来 ===
   useEffect(() => {
     // 从 localStorage 查看是否有标记
@@ -57,11 +62,25 @@ function App() {
     try {
       const res = await axios.post(`${BACKEND_URL}/api/grab`, { taskId });
       if (res.data.success) {
-        alert(`抢单成功！\n联系方式: ${res.data.contact}\n(手慢无，数据已销毁)`);
+        // 成功！把结果存入状态，触发弹窗
+        setGrabResult(res.data.contact);
+        setIsCopied(false); // 重置复制状态
       } else {
         alert(res.data.message);
       }
     } catch (e) { alert("网络错误"); }
+  };
+
+  // === 新增：复制功能 ===
+  const handleCopy = () => {
+    if (!grabResult) return;
+    navigator.clipboard.writeText(grabResult).then(() => {
+      setIsCopied(true);
+      // 2秒后恢复按钮文字
+      setTimeout(() => setIsCopied(false), 2000);
+    }).catch(err => {
+      alert("复制失败，请手动长按复制");
+    });
   };
 
   const filteredTasks = tasks.filter(task => {
@@ -125,6 +144,70 @@ function App() {
                 我知道了，开始找人！
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* === 2. 新增：抢单成功弹窗 (Success Modal) === */}
+      {grabResult && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in">
+          <div className="bg-slate-800 rounded-2xl w-full max-w-sm border border-green-500/50 shadow-[0_0_30px_rgba(34,197,94,0.3)] overflow-hidden transform transition-all scale-100">
+            
+            {/* 头部动画区 */}
+            <div className="bg-gradient-to-br from-green-600 to-emerald-800 p-6 text-center">
+              <div className="text-4xl mb-2">🎉</div>
+              <h2 className="text-2xl font-black text-white tracking-wider">抢单成功！</h2>
+              <p className="text-green-100 text-xs mt-1 opacity-80">手速很快，对方正在等你</p>
+            </div>
+
+            {/* 内容区 */}
+            <div className="p-6 space-y-6">
+              <div className="space-y-2">
+                <label className="text-slate-400 text-xs font-bold uppercase tracking-wider">对方联系方式</label>
+                
+                {/* 大号文字显示区域 */}
+                <div className="bg-black/40 p-4 rounded-lg border border-slate-700 text-center relative group">
+                  <p className="text-xl font-mono font-bold text-green-400 break-all select-all">
+                    {grabResult}
+                  </p>
+                  <p className="text-[10px] text-slate-500 mt-1">（长按也可手动复制）</p>
+                </div>
+              </div>
+
+              {/* 按钮组 */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* 复制按钮 */}
+                <button 
+                  onClick={handleCopy}
+                  className={`col-span-2 py-3 rounded-xl font-bold text-slate-900 transition-all flex items-center justify-center gap-2 ${
+                    isCopied 
+                    ? 'bg-green-400 cursor-default' 
+                    : 'bg-white hover:bg-slate-200 active:scale-95'
+                  }`}
+                >
+                  {isCopied ? (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                      已复制
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                      一键复制
+                    </>
+                  )}
+                </button>
+
+                {/* 关闭按钮 */}
+                <button 
+                  onClick={() => setGrabResult(null)}
+                  className="col-span-2 py-3 rounded-xl font-bold text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                >
+                  关闭
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
       )}
