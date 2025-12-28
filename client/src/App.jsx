@@ -136,6 +136,48 @@ function App() {
                 </ul>
               </div>
 
+              {/* === 新增：反馈联系区域 === */}
+              <div className="pt-2 border-t border-slate-700/50">
+                <h3 className="text-slate-500 font-bold text-xs uppercase tracking-wider mb-3">
+                  🐛 反馈 & 联系作者
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  
+                  {/* 微信卡片 */}
+                  <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 flex items-center gap-3">
+                    <div className="bg-green-500/10 p-2 rounded-lg text-green-500">
+                      {/* 微信图标 */}
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8.5,13.5A1.5,1.5 0 1,0 7,12,1.5,1.5,0 0,0 8.5,13.5Zm7,0a1.5,1.5,0 1,0-1.5-1.5A1.5,1.5,0 0,0 15.5,13.5Zm4.8-6.3C20.3,3.7,16.5,1,12,1S3.7,3.7,3.7,7.2c0,1.9,1.1,3.7,3,4.8L6.2,14l2.6-1.4a8.6,8.6,0,0,0,3.2.6,9.2,9.2,0,0,0,1.8-.2l.7,3.5,3.3-1.8A7.6,7.6,0,0,0,22,9.7C22,8.9,21.4,8,20.3,7.2ZM12,11.8a8,8,0,0,1-1.3.1,7.3,7.3,0,0,1-2.8-.5L5.4,12.7,6,10.9A5.6,5.6,0,0,1,4.7,7.2C4.7,4.3,8,2,12,2s7.3,2.3,7.3,5.2S16,12.4,12,11.8Z"/></svg>
+                    </div>
+                    <div className="overflow-hidden">
+                      <div className="text-[10px] text-slate-500">微信号</div>
+                      {/* select-all 让用户点一下就能全选复制 */}
+                      <div className="text-white text-sm font-mono font-bold select-all truncate">
+                        away_y_y
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 邮箱卡片 (点击自动发邮件) */}
+                  <a 
+                    href="mailto:603132073@qq.com" 
+                    className="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 flex items-center gap-3 hover:bg-slate-800 transition-colors group"
+                  >
+                    <div className="bg-blue-500/10 p-2 rounded-lg text-blue-500 group-hover:scale-110 transition-transform">
+                      {/* 邮箱图标 */}
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                    </div>
+                    <div className="overflow-hidden">
+                      <div className="text-[10px] text-slate-500">发送邮件</div>
+                      <div className="text-white text-sm font-mono font-bold truncate">
+                        603132073@qq.com
+                      </div>
+                    </div>
+                  </a>
+
+                </div>
+              </div>
+
               {/* 开始按钮 */}
               <button 
                 onClick={closeIntro}
