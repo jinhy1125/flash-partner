@@ -120,7 +120,7 @@ function App() {
               <div className="space-y-2">
                 <h3 className="text-blue-400 font-bold text-sm uppercase tracking-wider">核心玩法</h3>
                 <p className="text-slate-300 text-sm leading-relaxed">
-                  这是一个<span className="text-white font-bold">“阅后即焚”</span>的实时找人平台。
+                  这是一个<span className="text-white font-bold">“阅后即焚”</span>的实时找活人平台。
                   发布的任务 <span className="text-yellow-400">5分钟后自动消失</span>。
                   一旦有人点击“立即回应”，任务也会<span className="text-red-400">瞬间销毁</span>，
                   联系方式仅对抢单者可见。
