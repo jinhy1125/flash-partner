@@ -100,6 +100,7 @@ app.post('/api/post', (req, res) => {
 app.post('/api/grab', (req, res) => {
   const { taskId } = req.body;
   const record = memoryDb[taskId];
+  const data = record?.data;
 
   if (!record) {
     return res.json({ success: false, message: "手慢了，任务已不存在！" });
@@ -107,7 +108,7 @@ app.post('/api/grab', (req, res) => {
 
   // === 核心：抢单成功，销毁数据 ===
   clearTimeout(record.timer); // 清除定时器
-  const realContact = record.data.contact; // 获取真实联系方式
+  const realContact = data.contact; // 获取真实联系方式
   
   delete memoryDb[taskId]; // 从内存删除
   
@@ -115,14 +116,13 @@ app.post('/api/grab', (req, res) => {
   io.emit('remove_task', taskId);
 
   if (data) {
-     const task = JSON.parse(data);
-     const waitTime = (Date.now() - task.createdAt) / 1000; // 计算等待了多久
+     const waitTime = (Date.now() - data.createdAt) / 1000; // 计算等待了多久
 
      // === 记录抢单成功数据 ===
      if (mongoose.connection.readyState === 1) {
        AnalyticsLog.create({
          action: 'grab',
-         title: task.title,
+         title: data.title,
          duration: waitTime, // 这个数据最值钱！比如 "平均 30s 被抢"
          timestamp: new Date()
        }).catch(e => console.error("Log error", e));
