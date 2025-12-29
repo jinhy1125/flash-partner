@@ -10,6 +10,8 @@ const socket = io(BACKEND_URL);
 function App() {
   const [tasks, setTasks] = useState([]);
   const [form, setForm] = useState({ title: '', contact: '' });
+  // 新增：控制发布按钮的 loading 状态
+  const [isPublishing, setIsPublishing] = useState(false); 
   const [searchTerm, setSearchTerm] = useState('');
   const [now, setNow] = useState(Date.now());
   
@@ -52,10 +54,19 @@ function App() {
 
   const postTask = async () => {
     if(!form.title || !form.contact) return alert("请填写完整");
+
+    // 1. 开始转圈
+    setIsPublishing(true);
+
     try {
       await axios.post(`${BACKEND_URL}/api/post`, form);
       setForm({ title: '', contact: '' });
-    } catch (e) { alert("发布失败，后端没开？"); }
+    } catch (e) { 
+      alert("发布失败，后端没开？"); 
+    } finally {
+      // 2. 发布完成后，无论成功失败，都要停止转圈
+      setIsPublishing(false);
+    }
   };
 
   const grabTask = async (taskId) => {
@@ -287,9 +298,25 @@ function App() {
           />
           <button 
             onClick={postTask}
-            className="w-full bg-blue-600 active:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors"
+            disabled={isPublishing} // 加载时禁用点击
+            className={`w-full font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2 ${
+              isPublishing 
+                ? 'bg-slate-600 cursor-not-allowed opacity-80' // 加载时的样式
+                : 'bg-blue-600 active:bg-blue-700 hover:bg-blue-500 text-white' // 正常样式
+            }`}
           >
-            发布 (5分钟后消失)
+            {isPublishing ? (
+              <>
+                {/* Tailwind 标准转圈动画 SVG */}
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>服务器唤醒中...</span>
+              </>
+            ) : (
+              "发布 (5分钟后消失)"
+            )}
           </button>
         </div>
 
