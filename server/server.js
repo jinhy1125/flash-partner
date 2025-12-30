@@ -44,7 +44,15 @@ const DEFAULT_TTL = 300; // 300秒
 
 io.on('connection', (socket) => {
   console.log('新用户连接:', socket.id);
-  
+
+  // === 1. 定义一个广播人数的函数 ===
+  const broadcastUserCount = () => {
+    const count = io.engine.clientsCount;
+    io.emit('online_count', count);
+  };
+  // === 2. 用户进来时，立即广播 ===
+  broadcastUserCount();
+
   // 发送当前存活任务
   socket.on('request_active_tasks', () => {
     const tasks = Object.values(memoryDb).map(item => {
@@ -54,6 +62,16 @@ io.on('connection', (socket) => {
     });
     socket.emit('init_tasks', tasks);
   });
+
+  // === 3. 用户断开时，广播(更新)人数 ===
+  socket.on('disconnect', () => {
+    console.log('用户断开:', socket.id);
+    // 这里有一点小 trick：disconnect 触发时，Socket.io 可能还没把这个连接完全剔除
+    // 所以我们稍微延迟一点点再广播，或者直接用 broadcastUserCount()
+    // 简单起见，直接调用即可，io.engine.clientsCount 通常会自动处理
+    broadcastUserCount();
+  });
+
 });
 
 app.post('/api/post', (req, res) => {

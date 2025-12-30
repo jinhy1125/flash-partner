@@ -22,6 +22,8 @@ function App() {
   const [grabResult, setGrabResult] = useState(null); // 存放抢到的联系方式，null表示没抢
   const [isCopied, setIsCopied] = useState(false);    // 控制“已复制”的提示文字
 
+  // === 新增：在线人数状态 ===
+  const [onlineCount, setOnlineCount] = useState(0);
 
   // === 1. 初始化逻辑：检查用户是不是第一次来 ===
   useEffect(() => {
@@ -38,12 +40,12 @@ function App() {
     localStorage.setItem('hasSeenIntro', 'true'); // 标记为已读
   };
 
-  // ... Socket 和 倒计时 逻辑保持不变 ...
   useEffect(() => {
     socket.emit('request_active_tasks');
     socket.on('new_task', (task) => setTasks((prev) => [task, ...prev]));
     socket.on('init_tasks', (initTasks) => setTasks(initTasks));
     socket.on('remove_task', (id) => setTasks((prev) => prev.filter(t => t.id !== id)));
+    socket.on('online_count', (count) => setOnlineCount(count));
     return () => socket.off();
   }, []);
 
@@ -109,7 +111,7 @@ function App() {
             {/* 弹窗头部 */}
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                👋 欢迎来到闪电搭子
+                👋 欢迎来到咔哒 ⚡ 闪电搭子
               </h2>
             </div>
             
@@ -267,19 +269,35 @@ function App() {
 
       <div className="max-w-md mx-auto">
         {/* 顶部栏：标题 + 问号按钮 */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center">
           <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600">
             咔哒 ⚡ 闪电搭子
           </h1>
-          {/* 3. 再看一遍的按钮 */}
+
+          {/* 简介按钮 */}
           <button 
             onClick={() => setShowIntro(true)}
-            className="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 flex items-center justify-center transition"
+            className="w-9 h-9 rounded-full bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 flex items-center justify-center transition shadow-lg border border-slate-700/50"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </button>
+        </div>
+        
+        {/* 第二行：在线人数 (独立在标题下方) */}
+        <div className="flex items-center gap-2 mt-2 ml-1">
+          {/* 绿色呼吸点 */}
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+          </span>
+          
+          {/* 文字 */}
+          <span className="text-xs text-slate-400 font-medium font-mono">
+            <span className="text-green-400 font-bold text-sm mr-1">{onlineCount}</span>
+            人正在蹲搭子
+          </span>
         </div>
         
         {/* 发布框 */}
