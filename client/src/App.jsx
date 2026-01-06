@@ -23,7 +23,6 @@ function App() {
   // === 筛选状态 ===
   const [activeTab, setActiveTab] = useState('ALL'); 
   const [searchTerm, setSearchTerm] = useState('');
-  // 新增：当前选中的快捷筛选属性 (多选)
   const [selectedAttrs, setSelectedAttrs] = useState([]);
   
   const [now, setNow] = useState(Date.now());
@@ -79,11 +78,10 @@ function App() {
     return () => clearInterval(t);
   }, []);
 
-  // 切换 Tab 时清空筛选条件
   const handleTabChange = (key) => {
     setActiveTab(key);
-    setSelectedAttrs([]); // 重置属性筛选
-    setSearchTerm('');    // 也可以重置搜索词，看需求
+    setSelectedAttrs([]); 
+    setSearchTerm('');    
   };
 
   const postTask = async () => {
@@ -162,30 +160,24 @@ function App() {
     });
   };
 
-  // === 核心筛选逻辑升级 ===
   const filteredTasks = tasks.filter(task => {
-    // 1. 先筛 Tag (一级分类)
     if (activeTab !== 'ALL' && task.tag !== activeTab) return false;
     
-    // 2. 再筛快捷属性 (Selected Attrs) - 必须包含所有选中的属性 (AND 逻辑)
     if (selectedAttrs.length > 0) {
       if (!task.attributes) return false;
       const hasAllAttrs = selectedAttrs.every(attr => task.attributes.includes(attr));
       if (!hasAllAttrs) return false;
     }
 
-    // 3. 最后筛文本关键词 (OR 逻辑：匹配标题 或 匹配任意属性)
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       const matchTitle = task.title.toLowerCase().includes(term);
-      // 注意：即使属性没被选中，只要文字匹配也算
       const matchAttr = task.attributes && task.attributes.some(attr => attr.toLowerCase().includes(term));
       return matchTitle || matchAttr;
     }
     return true;
   });
 
-  // 处理属性多选 (发布表单用)
   const toggleFormAttribute = (attr) => {
     setForm(prev => {
       const exists = prev.attributes.includes(attr);
@@ -197,7 +189,6 @@ function App() {
     });
   };
 
-  // 处理筛选属性多选 (首页筛选用)
   const toggleFilterAttribute = (attr) => {
     setSelectedAttrs(prev => {
       if (prev.includes(attr)) {
@@ -279,26 +270,54 @@ function App() {
           )}
         </div>
 
-        {/* === 3. 新增：快捷属性筛选 (仅在选中特定游戏时显示) === */}
+        {/* === 3. 快捷属性筛选 (分层展示) === */}
         {activeTab !== 'ALL' && GAME_CONFIG[activeTab] && (
-          <div className="mb-6 flex flex-wrap gap-2 animate-fade-in px-1">
-             {/* 合并大区和模式，平铺展示 */}
-             {[...(GAME_CONFIG[activeTab].regions || []), ...(GAME_CONFIG[activeTab].modes || [])].map(attr => {
-               const isSelected = selectedAttrs.includes(attr);
-               return (
-                 <button
-                   key={attr}
-                   onClick={() => toggleFilterAttribute(attr)}
-                   className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${
-                     isSelected 
-                       ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/30' 
-                       : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-slate-200'
-                   }`}
-                 >
-                   {attr}
-                 </button>
-               )
-             })}
+          <div className="mb-6 space-y-3 animate-fade-in px-1">
+             {/* 区域 (Regions) */}
+             {GAME_CONFIG[activeTab].regions && GAME_CONFIG[activeTab].regions.length > 0 && (
+               <div className="flex flex-wrap gap-2 items-center">
+                 <span className="text-[10px] text-slate-500 font-bold uppercase w-8">大区</span>
+                 {GAME_CONFIG[activeTab].regions.map(attr => {
+                   const isSelected = selectedAttrs.includes(attr);
+                   return (
+                     <button
+                       key={attr}
+                       onClick={() => toggleFilterAttribute(attr)}
+                       className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${
+                         isSelected 
+                           ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/30' 
+                           : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-slate-200'
+                       }`}
+                     >
+                       {attr}
+                     </button>
+                   )
+                 })}
+               </div>
+             )}
+
+             {/* 模式 (Modes) */}
+             {GAME_CONFIG[activeTab].modes && GAME_CONFIG[activeTab].modes.length > 0 && (
+               <div className="flex flex-wrap gap-2 items-center">
+                 <span className="text-[10px] text-slate-500 font-bold uppercase w-8">模式</span>
+                 {GAME_CONFIG[activeTab].modes.map(attr => {
+                   const isSelected = selectedAttrs.includes(attr);
+                   return (
+                     <button
+                       key={attr}
+                       onClick={() => toggleFilterAttribute(attr)}
+                       className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${
+                         isSelected 
+                           ? 'bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-500/30' 
+                           : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-slate-200'
+                       }`}
+                     >
+                       {attr}
+                     </button>
+                   )
+                 })}
+               </div>
+             )}
           </div>
         )}
 
@@ -375,7 +394,7 @@ function App() {
         </div>
       </div>
 
-      {/* 悬浮按钮 & 弹窗保持不变 */}
+      {/* 悬浮按钮保持不变 */}
       <button 
         onClick={() => setShowPostModal(true)}
         className="fixed bottom-8 right-6 px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-full shadow-[0_8px_25px_rgba(37,99,235,0.4)] flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 z-50 group border border-blue-400/30"
@@ -386,7 +405,7 @@ function App() {
         <span className="font-black text-lg tracking-wider">找搭子！！</span>
       </button>
 
-      {/* 发布弹窗 */}
+      {/* 发布弹窗 (分层优化版) */}
       {showPostModal && (
         <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center sm:p-4 bg-black/90 backdrop-blur-md animate-fade-in">
           <div className="bg-slate-800 rounded-t-2xl sm:rounded-2xl w-full max-w-sm border-t sm:border border-slate-700 shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
@@ -396,6 +415,7 @@ function App() {
             </div>
             
             <div className="p-5 space-y-5">
+              {/* 1. 选择分区 */}
               <div className="space-y-2">
                 <label className="text-xs text-slate-400 uppercase font-bold tracking-wider">1. 选择分区</label>
                 <div className="grid grid-cols-4 gap-2">
@@ -411,24 +431,57 @@ function App() {
                   ))}
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-xs text-slate-400 uppercase font-bold tracking-wider">2. 标签 (可选)</label>
-                <div className="flex flex-wrap gap-2">
-                  {[...(GAME_CONFIG[form.tag]?.regions || []), ...(GAME_CONFIG[form.tag]?.modes || [])].map(attr => (
-                    <button
-                      key={attr}
-                      onClick={() => toggleFormAttribute(attr)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                        form.attributes.includes(attr) 
-                          ? 'bg-blue-600 border-blue-500 text-white' 
-                          : 'bg-slate-700 border-transparent text-slate-400 hover:bg-slate-600'
-                      }`}
-                    >
-                      {attr}
-                    </button>
-                  ))}
-                </div>
+
+              {/* 2. 选择属性 (分行展示) */}
+              <div className="space-y-3">
+                <label className="text-xs text-slate-400 uppercase font-bold tracking-wider">2. 属性细节 (可选)</label>
+                
+                {/* 大区 */}
+                {GAME_CONFIG[form.tag]?.regions && GAME_CONFIG[form.tag].regions.length > 0 && (
+                  <div className="space-y-1">
+                    <div className="text-[10px] text-slate-500">大区</div>
+                    <div className="flex flex-wrap gap-2">
+                      {GAME_CONFIG[form.tag].regions.map(attr => (
+                        <button
+                          key={attr}
+                          onClick={() => toggleFormAttribute(attr)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                            form.attributes.includes(attr) 
+                              ? 'bg-blue-600 border-blue-500 text-white' 
+                              : 'bg-slate-700 border-transparent text-slate-400 hover:bg-slate-600'
+                          }`}
+                        >
+                          {attr}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 模式 */}
+                {GAME_CONFIG[form.tag]?.modes && GAME_CONFIG[form.tag].modes.length > 0 && (
+                  <div className="space-y-1">
+                    <div className="text-[10px] text-slate-500">模式 / 类型</div>
+                    <div className="flex flex-wrap gap-2">
+                      {GAME_CONFIG[form.tag].modes.map(attr => (
+                        <button
+                          key={attr}
+                          onClick={() => toggleFormAttribute(attr)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                            form.attributes.includes(attr) 
+                              ? 'bg-purple-600 border-purple-500 text-white' 
+                              : 'bg-slate-700 border-transparent text-slate-400 hover:bg-slate-600'
+                          }`}
+                        >
+                          {attr}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
+
+              {/* 3. 输入内容 */}
               <div className="space-y-3 pt-2 border-t border-slate-700/50">
                 <div>
                   <input 
@@ -447,6 +500,7 @@ function App() {
                   />
                 </div>
               </div>
+
               <button 
                 onClick={postTask}
                 disabled={isPublishing}
