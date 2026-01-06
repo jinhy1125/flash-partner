@@ -423,19 +423,94 @@ function App() {
         </div>
       )}
 
-      {/* 介绍弹窗 & 抢单弹窗 代码省略，保持不变即可 (为了缩减输出长度，但我还是写全吧防止出错) */}
+      {/* === 介绍弹窗 === */}
       {showIntro && (
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
           <div className="bg-slate-800 rounded-2xl max-w-lg w-full border border-slate-700 shadow-2xl overflow-hidden">
+            {/* 弹窗头部 */}
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">👋 欢迎来到咔哒 ⚡ 闪电搭子</h2>
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                👋 欢迎来到咔哒 ⚡ 闪电搭子
+              </h2>
             </div>
+            
+            {/* 弹窗内容 */}
             <div className="p-6 space-y-6">
+              
+              {/* 核心玩法 */}
               <div className="space-y-2">
                 <h3 className="text-blue-400 font-bold text-sm uppercase tracking-wider">核心玩法</h3>
-                <p className="text-slate-300 text-sm leading-relaxed">阅后即焚，15分钟过期，抢单后销毁。</p>
+                <p className="text-slate-300 text-sm leading-relaxed">
+                  这是一个<span className="text-white font-bold">“阅后即焚”</span>的实时找活人平台。
+                  发布的任务 <span className="text-yellow-400">15分钟后自动消失</span>。
+                  一旦有人点击“立即回应”，任务也会<span className="text-red-400">瞬间销毁</span>，
+                  联系方式仅对抢单者可见。
+                </p>
               </div>
-              <button onClick={closeIntro} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl">开始找人！</button>
+
+              {/* 使用示例 */}
+              <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700/50">
+                <h3 className="text-green-400 font-bold text-sm uppercase tracking-wider mb-2">使用示例</h3>
+                <div className="text-sm space-y-1">
+                  <p><span className="text-slate-500">标题：</span> 黑色玫瑰 大乱斗缺1，来个猛男</p>
+                  <p><span className="text-slate-500">联系：</span> V: SuperMan123</p>
+                </div>
+              </div>
+
+              {/* 优化方向 (展示给用户看) */}
+              <div className="space-y-2">
+                <h3 className="text-purple-400 font-bold text-sm uppercase tracking-wider">🚧 正在施工 / 优化方向</h3>
+                <ul className="text-xs text-slate-400 list-disc list-inside space-y-1">
+                  <li>增加新消息提示音</li>
+                  <li>手机端体验深度优化</li>
+                  <li>更多游戏/生活分区</li>
+                </ul>
+              </div>
+
+              {/* 反馈联系区域 */}
+              <div className="pt-2 border-t border-slate-700/50">
+                <h3 className="text-slate-500 font-bold text-xs uppercase tracking-wider mb-3">
+                  🐛 反馈 & 联系作者
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* 微信卡片 */}
+                  <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 flex items-center gap-3">
+                    <div className="bg-green-500/10 p-2 rounded-lg text-green-500">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8.5,13.5A1.5,1.5 0 1,0 7,12,1.5,1.5,0 0,0 8.5,13.5Zm7,0a1.5,1.5,0 1,0-1.5-1.5A1.5,1.5,0 0,0 15.5,13.5Zm4.8-6.3C20.3,3.7,16.5,1,12,1S3.7,3.7,3.7,7.2c0,1.9,1.1,3.7,3,4.8L6.2,14l2.6-1.4a8.6,8.6,0,0,0,3.2.6,9.2,9.2,0,0,0,1.8-.2l.7,3.5,3.3-1.8A7.6,7.6,0,0,0,22,9.7C22,8.9,21.4,8,20.3,7.2ZM12,11.8a8,8,0,0,1-1.3.1,7.3,7.3,0,0,1-2.8-.5L5.4,12.7,6,10.9A5.6,5.6,0,0,1,4.7,7.2C4.7,4.3,8,2,12,2s7.3,2.3,7.3,5.2S16,12.4,12,11.8Z"/></svg>
+                    </div>
+                    <div className="overflow-hidden">
+                      <div className="text-[10px] text-slate-500">微信号</div>
+                      <div className="text-white text-sm font-mono font-bold select-all truncate">
+                        away_y_y
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 邮箱卡片 */}
+                  <a 
+                    href="mailto:603132073@qq.com" 
+                    className="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 flex items-center gap-3 hover:bg-slate-800 transition-colors group"
+                  >
+                    <div className="bg-blue-500/10 p-2 rounded-lg text-blue-500 group-hover:scale-110 transition-transform">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                    </div>
+                    <div className="overflow-hidden">
+                      <div className="text-[10px] text-slate-500">发送邮件</div>
+                      <div className="text-white text-sm font-mono font-bold truncate">
+                        603132073@qq.com
+                      </div>
+                    </div>
+                  </a>
+                </div>
+              </div>
+
+              {/* 开始按钮 */}
+              <button 
+                onClick={closeIntro}
+                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-all active:scale-95"
+              >
+                我知道了，开始找人！
+              </button>
             </div>
           </div>
         </div>
