@@ -17,6 +17,9 @@ function App() {
   
   // === 新增：控制介绍框的显示状态 ===
   const [showIntro, setShowIntro] = useState(false);
+  
+  // === 新增：控制发布弹窗的显示状态 ===
+  const [showPostModal, setShowPostModal] = useState(false);
 
   // === 新增/修改：抢单结果状态 ===
   const [grabResult, setGrabResult] = useState(null); // 存放抢到的联系方式，null表示没抢
@@ -63,6 +66,7 @@ function App() {
     try {
       await axios.post(`${BACKEND_URL}/api/post`, form);
       setForm({ title: '', contact: '' });
+      setShowPostModal(false); // 成功后关闭弹窗
     } catch (e) { 
       alert("发布失败，后端没开？"); 
     } finally {
@@ -203,7 +207,69 @@ function App() {
         </div>
       )}
 
-      {/* === 2. 新增：抢单成功弹窗 (Success Modal) === */}
+      {/* === 新增：发布任务弹窗 (Post Modal) === */}
+      {showPostModal && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in">
+          <div className="bg-slate-800 rounded-2xl w-full max-w-sm border border-slate-700 shadow-2xl overflow-hidden transform transition-all scale-100">
+            
+            {/* 头部 */}
+            <div className="bg-slate-900 p-4 border-b border-slate-700 flex justify-between items-center">
+              <h2 className="text-lg font-bold text-white">⚡ 发布新搭子</h2>
+              <button onClick={() => setShowPostModal(false)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            {/* 表单内容 */}
+            <div className="p-5 space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs text-slate-400 uppercase font-bold tracking-wider ml-1">标题 / 描述</label>
+                <input 
+                  className="w-full p-3 bg-slate-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="例: 艾欧尼亚 灵活缺2" 
+                  autoFocus
+                  value={form.title}
+                  onChange={e => setForm({...form, title: e.target.value})}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-slate-400 uppercase font-bold tracking-wider ml-1">联系方式 (抢后可见)</label>
+                <input 
+                  className="w-full p-3 bg-slate-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="例: V: my_wechat_id" 
+                  value={form.contact}
+                  onChange={e => setForm({...form, contact: e.target.value})}
+                />
+              </div>
+
+              <div className="pt-2">
+                <button 
+                  onClick={postTask}
+                  disabled={isPublishing}
+                  className={`w-full font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2 ${
+                    isPublishing 
+                      ? 'bg-slate-600 cursor-not-allowed opacity-80' 
+                      : 'bg-blue-600 active:bg-blue-700 hover:bg-blue-500 text-white'
+                  }`}
+                >
+                  {isPublishing ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      发布中...
+                    </>
+                  ) : (
+                    "确认发布 (5分钟后消失)"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* === 2. 抢单成功弹窗 (Success Modal) === */}
       {grabResult && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in">
           <div className="bg-slate-800 rounded-2xl w-full max-w-sm border border-green-500/50 shadow-[0_0_30px_rgba(34,197,94,0.3)] overflow-hidden transform transition-all scale-100">
@@ -267,7 +333,7 @@ function App() {
         </div>
       )}
 
-      <div className="max-w-md mx-auto">
+      <div className="max-w-md mx-auto pb-24">
         {/* 顶部栏：标题 + 问号按钮 */}
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600">
@@ -286,7 +352,7 @@ function App() {
         </div>
         
         {/* 第二行：在线人数 (独立在标题下方) */}
-        <div className="flex items-center gap-2 mt-2 ml-1">
+        <div className="flex items-center gap-2 mt-2 ml-1 mb-6">
           {/* 绿色呼吸点 */}
           <span className="relative flex h-2.5 w-2.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -300,44 +366,6 @@ function App() {
           </span>
         </div>
         
-        {/* 发布框 */}
-        <div className="bg-slate-800 p-4 rounded-xl mb-6 shadow-xl border border-slate-700">
-          <input 
-            className="w-full p-3 mb-3 bg-slate-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="找什么搭子？(例: 大乱斗缺1)" 
-            value={form.title}
-            onChange={e => setForm({...form, title: e.target.value})}
-          />
-          <input 
-            className="w-full p-3 mb-3 bg-slate-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="联系方式 (抢单后可见)" 
-            value={form.contact}
-            onChange={e => setForm({...form, contact: e.target.value})}
-          />
-          <button 
-            onClick={postTask}
-            disabled={isPublishing} // 加载时禁用点击
-            className={`w-full font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2 ${
-              isPublishing 
-                ? 'bg-slate-600 cursor-not-allowed opacity-80' // 加载时的样式
-                : 'bg-blue-600 active:bg-blue-700 hover:bg-blue-500 text-white' // 正常样式
-            }`}
-          >
-            {isPublishing ? (
-              <>
-                {/* Tailwind 标准转圈动画 SVG */}
-                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span>服务器唤醒中...</span>
-              </>
-            ) : (
-              "发布 (5分钟后消失)"
-            )}
-          </button>
-        </div>
-
         {/* 搜索框 */}
         <div className="mb-4 relative sticky top-2 z-10">
            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -392,6 +420,21 @@ function App() {
           )}
         </div>
       </div>
+
+      {/* === 3. 悬浮发布按钮 (FAB) === */}
+      <button 
+        onClick={() => setShowPostModal(true)}
+        className="fixed bottom-8 right-6 px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-full shadow-[0_8px_25px_rgba(37,99,235,0.4)] flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 z-50 group border border-blue-400/30"
+      >
+        <svg className="w-6 h-6 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
+        </svg>
+        <span className="font-black text-lg tracking-wider">找搭子！！</span>
+        
+        {/* 呼吸灯光效环 */}
+        <span className="absolute inset-0 rounded-full bg-blue-400 opacity-20 animate-ping pointer-events-none"></span>
+      </button>
+
     </div>
   );
 }
