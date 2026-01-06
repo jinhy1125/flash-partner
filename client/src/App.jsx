@@ -11,19 +11,20 @@ const socket = io(BACKEND_URL);
 function App() {
   const [tasks, setTasks] = useState([]);
   
-  // 表单状态：增加 tag 和 attributes
   const [form, setForm] = useState({ 
     title: '', 
     contact: '', 
-    tag: 'LOL', // 默认选中第一个
+    tag: 'LOL', 
     attributes: [] 
   });
   
   const [isPublishing, setIsPublishing] = useState(false); 
   
-  // 筛选状态
-  const [activeTab, setActiveTab] = useState('ALL'); // ALL, LOL, VALORANT...
+  // === 筛选状态 ===
+  const [activeTab, setActiveTab] = useState('ALL'); 
   const [searchTerm, setSearchTerm] = useState('');
+  // 新增：当前选中的快捷筛选属性 (多选)
+  const [selectedAttrs, setSelectedAttrs] = useState([]);
   
   const [now, setNow] = useState(Date.now());
   const [showIntro, setShowIntro] = useState(false);
@@ -78,6 +79,13 @@ function App() {
     return () => clearInterval(t);
   }, []);
 
+  // 切换 Tab 时清空筛选条件
+  const handleTabChange = (key) => {
+    setActiveTab(key);
+    setSelectedAttrs([]); // 重置属性筛选
+    setSearchTerm('');    // 也可以重置搜索词，看需求
+  };
+
   const postTask = async () => {
     if(!form.title || !form.contact) return alert("请填写完整");
     setIsPublishing(true);
@@ -95,7 +103,6 @@ function App() {
 
       const res = await axios.post(`${BACKEND_URL}/api/post`, form);
       if (res.data.success) {
-        // 重置表单，但保留刚才选的游戏，方便连发？或者重置为默认？这里选择保留tag
         setForm(prev => ({ ...prev, title: '', contact: '', attributes: [] }));
         setShowPostModal(false); 
         setMyTasks({ [res.data.id]: res.data.ownerToken });
@@ -155,29 +162,48 @@ function App() {
     });
   };
 
-  // === 筛选逻辑更新 ===
+  // === 核心筛选逻辑升级 ===
   const filteredTasks = tasks.filter(task => {
-    // 1. 先筛分类
+    // 1. 先筛 Tag (一级分类)
     if (activeTab !== 'ALL' && task.tag !== activeTab) return false;
     
-    // 2. 再筛关键词 (支持搜标题、属性)
+    // 2. 再筛快捷属性 (Selected Attrs) - 必须包含所有选中的属性 (AND 逻辑)
+    if (selectedAttrs.length > 0) {
+      if (!task.attributes) return false;
+      const hasAllAttrs = selectedAttrs.every(attr => task.attributes.includes(attr));
+      if (!hasAllAttrs) return false;
+    }
+
+    // 3. 最后筛文本关键词 (OR 逻辑：匹配标题 或 匹配任意属性)
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       const matchTitle = task.title.toLowerCase().includes(term);
+      // 注意：即使属性没被选中，只要文字匹配也算
       const matchAttr = task.attributes && task.attributes.some(attr => attr.toLowerCase().includes(term));
       return matchTitle || matchAttr;
     }
     return true;
   });
 
-  // 处理属性多选
-  const toggleAttribute = (attr) => {
+  // 处理属性多选 (发布表单用)
+  const toggleFormAttribute = (attr) => {
     setForm(prev => {
       const exists = prev.attributes.includes(attr);
       if (exists) {
         return { ...prev, attributes: prev.attributes.filter(a => a !== attr) };
       } else {
         return { ...prev, attributes: [...prev.attributes, attr] };
+      }
+    });
+  };
+
+  // 处理筛选属性多选 (首页筛选用)
+  const toggleFilterAttribute = (attr) => {
+    setSelectedAttrs(prev => {
+      if (prev.includes(attr)) {
+        return prev.filter(a => a !== attr);
+      } else {
+        return [...prev, attr];
       }
     });
   };
@@ -211,11 +237,11 @@ function App() {
           </span>
         </div>
 
-        {/* === 新增：顶部分类 Tab === */}
+        {/* === 1. 顶部分类 Tab === */}
         <div className="relative group">
           <div className="flex gap-2 overflow-x-auto pb-2 mb-2 no-scrollbar px-1">
             <button 
-              onClick={() => setActiveTab('ALL')}
+              onClick={() => handleTabChange('ALL')}
               className={`px-3 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-colors flex-shrink-0 ${activeTab === 'ALL' ? 'bg-white text-slate-900' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
             >
               全部
@@ -223,21 +249,19 @@ function App() {
             {Object.entries(GAME_CONFIG).map(([key, config]) => (
               <button
                 key={key}
-                onClick={() => setActiveTab(key)}
+                onClick={() => handleTabChange(key)}
                 className={`px-3 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-colors flex-shrink-0 border ${activeTab === key ? config.color + ' bg-slate-800' : 'border-transparent bg-slate-800 text-slate-400 hover:text-white'}`}
               >
                 {config.label}
               </button>
             ))}
-            {/* 占位元素，防止最后一个贴边 */}
             <div className="w-2 flex-shrink-0"></div>
           </div>
-          {/* 右侧渐变遮罩提示 */}
           <div className="absolute right-0 top-0 bottom-2 w-8 bg-gradient-to-l from-slate-900 to-transparent pointer-events-none md:hidden"></div>
         </div>
         
-        {/* 搜索框 */}
-        <div className="mb-6 relative sticky top-2 z-10">
+        {/* === 2. 搜索框 === */}
+        <div className="mb-4 relative sticky top-2 z-10">
            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
              <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -255,7 +279,30 @@ function App() {
           )}
         </div>
 
-        {/* 任务列表 (响应式网格) */}
+        {/* === 3. 新增：快捷属性筛选 (仅在选中特定游戏时显示) === */}
+        {activeTab !== 'ALL' && GAME_CONFIG[activeTab] && (
+          <div className="mb-6 flex flex-wrap gap-2 animate-fade-in px-1">
+             {/* 合并大区和模式，平铺展示 */}
+             {[...(GAME_CONFIG[activeTab].regions || []), ...(GAME_CONFIG[activeTab].modes || [])].map(attr => {
+               const isSelected = selectedAttrs.includes(attr);
+               return (
+                 <button
+                   key={attr}
+                   onClick={() => toggleFilterAttribute(attr)}
+                   className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${
+                     isSelected 
+                       ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/30' 
+                       : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-slate-200'
+                   }`}
+                 >
+                   {attr}
+                 </button>
+               )
+             })}
+          </div>
+        )}
+
+        {/* 任务列表 */}
         <div className="space-y-4 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4">
           {filteredTasks.map(task => {
             const timeLeft = Math.max(0, Math.floor((task.expiresAt - now) / 1000));
@@ -328,7 +375,7 @@ function App() {
         </div>
       </div>
 
-      {/* === 悬浮按钮 === */}
+      {/* 悬浮按钮 & 弹窗保持不变 */}
       <button 
         onClick={() => setShowPostModal(true)}
         className="fixed bottom-8 right-6 px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-full shadow-[0_8px_25px_rgba(37,99,235,0.4)] flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 z-50 group border border-blue-400/30"
@@ -339,7 +386,7 @@ function App() {
         <span className="font-black text-lg tracking-wider">找搭子！！</span>
       </button>
 
-      {/* === 发布弹窗 (改造版) === */}
+      {/* 发布弹窗 */}
       {showPostModal && (
         <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center sm:p-4 bg-black/90 backdrop-blur-md animate-fade-in">
           <div className="bg-slate-800 rounded-t-2xl sm:rounded-2xl w-full max-w-sm border-t sm:border border-slate-700 shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
@@ -349,34 +396,28 @@ function App() {
             </div>
             
             <div className="p-5 space-y-5">
-              
-              {/* 1. 选择分类 */}
               <div className="space-y-2">
                 <label className="text-xs text-slate-400 uppercase font-bold tracking-wider">1. 选择分区</label>
                 <div className="grid grid-cols-4 gap-2">
                   {Object.entries(GAME_CONFIG).map(([key, config]) => (
                     <button
                       key={key}
-                      onClick={() => setForm(prev => ({ ...prev, tag: key, attributes: [] }))} // 切换大类清空属性
+                      onClick={() => setForm(prev => ({ ...prev, tag: key, attributes: [] }))} 
                       className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all ${form.tag === key ? config.color + ' bg-slate-900 border-current' : 'border-slate-700 text-slate-500 hover:bg-slate-700'}`}
                     >
-                      {/* 这里可以用图标，暂时用文字首字代替 */}
                       <span className="text-lg font-black mb-1">{config.label[0]}</span>
                       <span className="text-[10px] scale-90">{config.label}</span>
                     </button>
                   ))}
                 </div>
               </div>
-
-              {/* 2. 选择属性 (动态渲染) */}
               <div className="space-y-2">
                 <label className="text-xs text-slate-400 uppercase font-bold tracking-wider">2. 标签 (可选)</label>
                 <div className="flex flex-wrap gap-2">
-                  {/* 合并大区和模式展示 */}
                   {[...(GAME_CONFIG[form.tag]?.regions || []), ...(GAME_CONFIG[form.tag]?.modes || [])].map(attr => (
                     <button
                       key={attr}
-                      onClick={() => toggleAttribute(attr)}
+                      onClick={() => toggleFormAttribute(attr)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
                         form.attributes.includes(attr) 
                           ? 'bg-blue-600 border-blue-500 text-white' 
@@ -388,8 +429,6 @@ function App() {
                   ))}
                 </div>
               </div>
-
-              {/* 3. 输入内容 */}
               <div className="space-y-3 pt-2 border-t border-slate-700/50">
                 <div>
                   <input 
@@ -408,7 +447,6 @@ function App() {
                   />
                 </div>
               </div>
-
               <button 
                 onClick={postTask}
                 disabled={isPublishing}
@@ -423,21 +461,15 @@ function App() {
         </div>
       )}
 
-      {/* === 介绍弹窗 === */}
       {showIntro && (
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
           <div className="bg-slate-800 rounded-2xl max-w-lg w-full border border-slate-700 shadow-2xl overflow-hidden">
-            {/* 弹窗头部 */}
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 👋 欢迎来到咔哒 ⚡ 闪电搭子
               </h2>
             </div>
-            
-            {/* 弹窗内容 */}
             <div className="p-6 space-y-6">
-              
-              {/* 核心玩法 */}
               <div className="space-y-2">
                 <h3 className="text-blue-400 font-bold text-sm uppercase tracking-wider">核心玩法</h3>
                 <p className="text-slate-300 text-sm leading-relaxed">
@@ -447,8 +479,6 @@ function App() {
                   联系方式仅对抢单者可见。
                 </p>
               </div>
-
-              {/* 使用示例 */}
               <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700/50">
                 <h3 className="text-green-400 font-bold text-sm uppercase tracking-wider mb-2">使用示例</h3>
                 <div className="text-sm space-y-1">
@@ -456,24 +486,11 @@ function App() {
                   <p><span className="text-slate-500">联系：</span> V: SuperMan123</p>
                 </div>
               </div>
-
-              {/* 优化方向 (展示给用户看) */}
-              <div className="space-y-2">
-                <h3 className="text-purple-400 font-bold text-sm uppercase tracking-wider">🚧 正在施工 / 优化方向</h3>
-                <ul className="text-xs text-slate-400 list-disc list-inside space-y-1">
-                  <li>增加新消息提示音</li>
-                  <li>手机端体验深度优化</li>
-                  <li>更多游戏/生活分区</li>
-                </ul>
-              </div>
-
-              {/* 反馈联系区域 */}
               <div className="pt-2 border-t border-slate-700/50">
                 <h3 className="text-slate-500 font-bold text-xs uppercase tracking-wider mb-3">
                   🐛 反馈 & 联系作者
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* 微信卡片 */}
                   <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 flex items-center gap-3">
                     <div className="bg-green-500/10 p-2 rounded-lg text-green-500">
                       <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8.5,13.5A1.5,1.5 0 1,0 7,12,1.5,1.5,0 0,0 8.5,13.5Zm7,0a1.5,1.5,0 1,0-1.5-1.5A1.5,1.5,0 0,0 15.5,13.5Zm4.8-6.3C20.3,3.7,16.5,1,12,1S3.7,3.7,3.7,7.2c0,1.9,1.1,3.7,3,4.8L6.2,14l2.6-1.4a8.6,8.6,0,0,0,3.2.6,9.2,9.2,0,0,0,1.8-.2l.7,3.5,3.3-1.8A7.6,7.6,0,0,0,22,9.7C22,8.9,21.4,8,20.3,7.2ZM12,11.8a8,8,0,0,1-1.3.1,7.3,7.3,0,0,1-2.8-.5L5.4,12.7,6,10.9A5.6,5.6,0,0,1,4.7,7.2C4.7,4.3,8,2,12,2s7.3,2.3,7.3,5.2S16,12.4,12,11.8Z"/></svg>
@@ -485,12 +502,7 @@ function App() {
                       </div>
                     </div>
                   </div>
-
-                  {/* 邮箱卡片 */}
-                  <a 
-                    href="mailto:603132073@qq.com" 
-                    className="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 flex items-center gap-3 hover:bg-slate-800 transition-colors group"
-                  >
+                  <a href="mailto:603132073@qq.com" className="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 flex items-center gap-3 hover:bg-slate-800 transition-colors group">
                     <div className="bg-blue-500/10 p-2 rounded-lg text-blue-500 group-hover:scale-110 transition-transform">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                     </div>
@@ -503,12 +515,7 @@ function App() {
                   </a>
                 </div>
               </div>
-
-              {/* 开始按钮 */}
-              <button 
-                onClick={closeIntro}
-                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-all active:scale-95"
-              >
+              <button onClick={closeIntro} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-all active:scale-95">
                 我知道了，开始找人！
               </button>
             </div>
