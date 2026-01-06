@@ -21,8 +21,10 @@ const io = new Server(server, {
 // 1. 日志模型 (原有)
 const LogSchema = new mongoose.Schema({
   action: String,   
-  title: String,    
-  tags: [String],   
+  title: String,
+  tag: String,      // 新增
+  attributes: [String], // 新增
+  tags: [String],   // 保留旧字段兼容，或废弃
   duration: Number, 
   timestamp: { type: Date, default: Date.now }
 });
@@ -34,8 +36,10 @@ const ActiveTaskSchema = new mongoose.Schema({
   title: String,
   contact: String, // 真实联系方式存数据库
   ownerToken: String,
-  createdAt: Number, // 存时间戳方便计算
-  expiresAt: Number  // 存时间戳
+  tag: String,      // 新增：游戏/分类 Key
+  attributes: [String], // 新增：属性数组
+  createdAt: Number, 
+  expiresAt: Number  
 });
 const ActiveTask = mongoose.model('ActiveTask', ActiveTaskSchema);
 
@@ -72,6 +76,8 @@ const restoreFromMongo = async () => {
           id: task.id,
           title: task.title,
           contact: task.contact,
+          tag: task.tag,             // 恢复
+          attributes: task.attributes, // 恢复
           createdAt: task.createdAt,
           expiresAt: task.expiresAt
         },
@@ -134,7 +140,7 @@ io.on('connection', (socket) => {
 });
 
 app.post('/api/post', async (req, res) => {
-  const { title, contact } = req.body;
+  const { title, contact, tag, attributes } = req.body;
   const id = uuidv4();
   const ownerToken = uuidv4(); 
   const expiresAt = Date.now() + (DEFAULT_TTL * 1000);
@@ -143,6 +149,8 @@ app.post('/api/post', async (req, res) => {
     id,
     title,
     contact,
+    tag: tag || 'OTHER', // 默认标签
+    attributes: attributes || [],
     createdAt: Date.now(),
     expiresAt
   };
@@ -168,6 +176,8 @@ app.post('/api/post', async (req, res) => {
     AnalyticsLog.create({
       action: 'post',
       title: title,
+      tag: tag,
+      attributes: attributes,
       timestamp: new Date()
     }).catch(e => console.error("Log error", e));
   }

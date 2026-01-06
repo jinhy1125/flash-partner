@@ -1,3 +1,30 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* 默认情况（PC/鼠标设备）：自定义一个细长的滚动条 */
+::-webkit-scrollbar {
+  height: 6px; /* 横向滚动条高度 */
+  width: 6px;  /* 纵向滚动条宽度 */
+}
+::-webkit-scrollbar-track {
+  background: transparent; 
+}
+::-webkit-scrollbar-thumb {
+  background: #475569; /* slate-600 */
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b; /* slate-500 */
+}
+
+/* 针对触摸设备/移动端：隐藏滚动条，体验像原生 App */
+@media (pointer: coarse) {
+  .no-scrollbar::-webkit-scrollbar {
+      display: none;
+  }
+  .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+  }
+}
