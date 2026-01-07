@@ -35,6 +35,7 @@ function App() {
   const [grabResult, setGrabResult] = useState(null); 
   const [isCopied, setIsCopied] = useState(false);    
   const [onlineCount, setOnlineCount] = useState(0);
+  const [isInitialLoading, setIsInitialLoading] = useState(true); // 新增加载状态
 
   const [myTasks, setMyTasks] = useState(() => {
     try {
@@ -63,7 +64,10 @@ function App() {
       const filtered = prev.filter(t => t.id !== task.id);
       return [task, ...filtered];
     }));
-    socket.on('init_tasks', (initTasks) => setTasks(initTasks));
+    socket.on('init_tasks', (initTasks) => {
+      setTasks(initTasks);
+      setIsInitialLoading(false); // 收到初始数据，关闭加载
+    });
     socket.on('remove_task', (id) => {
       setTasks((prev) => prev.filter(t => t.id !== id));
       setMyTasks(prev => {
@@ -373,87 +377,105 @@ function App() {
 
         {/* 任务列表 */}
         <div className="space-y-4 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4">
-          {filteredTasks.map(task => {
-            const timeLeft = Math.max(0, Math.floor((task.expiresAt - now) / 1000));
-            if (timeLeft === 0) return null;
-
-            const isMyTask = !!myTasks[task.id];
-            const isOfficial = task.isOfficial;
-            const config = GAME_CONFIG[task.tag] || GAME_CONFIG['GENERAL']; 
-
-            return (
-              <div key={task.id} className={`bg-slate-800 rounded-xl p-4 shadow-lg relative overflow-hidden border-l-4 flex flex-col ${isOfficial ? 'border-yellow-400 bg-slate-800/80 shadow-yellow-900/20' : isMyTask ? 'border-blue-400' : 'border-slate-600'} hover:bg-slate-750 transition-colors`}>
-                
-                {/* 标签栏 */}
-                <div className="flex flex-wrap gap-2 mb-3">
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${isOfficial ? 'text-yellow-400 border-yellow-400' : config.color || 'text-slate-400 border-slate-400'}`}>
-                    {config.label}
-                  </span>
-                  {task.attributes && task.attributes.slice(0, 2).map(attr => (
-                    <span key={attr} className={`text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap ${isOfficial ? 'bg-yellow-500/20 text-yellow-300' : 'bg-slate-700 text-slate-300'}`}>
-                      {attr}
-                    </span>
-                  ))}
-                  {task.attributes && task.attributes.length > 2 && (
-                    <span className="text-[10px] text-slate-500 px-1 py-0.5">+{task.attributes.length - 2}</span>
-                  )}
+          {isInitialLoading ? (
+            // 骨架屏加载效果
+            [1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="bg-slate-800/50 rounded-xl p-4 border border-slate-700 animate-pulse">
+                <div className="flex gap-2 mb-4">
+                  <div className="h-4 w-12 bg-slate-700 rounded"></div>
+                  <div className="h-4 w-16 bg-slate-700 rounded"></div>
                   <div className="flex-1"></div>
-                  <span className={`text-xs px-2 py-0.5 rounded font-mono whitespace-nowrap ${isOfficial ? 'bg-yellow-500/20 text-yellow-400' : timeLeft < 60 ? 'bg-red-500/20 text-red-400 animate-pulse' : 'bg-slate-900/50 text-slate-500'}`}>
-                    {isOfficial ? '置顶' : `${Math.floor(timeLeft / 60)}:${String(timeLeft % 60).padStart(2, '0')}`}
-                  </span>
+                  <div className="h-4 w-10 bg-slate-700 rounded"></div>
                 </div>
-
-                <h3 className={`font-bold text-lg mb-3 break-words flex-grow leading-tight ${isOfficial ? 'text-yellow-100' : 'text-white'}`}>{task.title}</h3>
-                
-                {isMyTask ? (
-                  <div className="flex gap-2 mt-auto">
-                    <button 
-                      onClick={() => renewTask(task.id)}
-                      className="flex-1 bg-blue-500 active:bg-blue-600 hover:bg-blue-400 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 text-sm"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                      续命
-                    </button>
-                    <button 
-                      onClick={() => cancelTask(task.id)}
-                      className="px-3 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm font-medium transition-colors"
-                    >
-                      撤回
-                    </button>
-                  </div>
-                ) : (
-                  <button 
-                    onClick={() => grabTask(task.id)}
-                    className={`w-full font-bold py-2 rounded-lg mt-auto transition-colors flex items-center justify-center gap-2 ${
-                      isOfficial 
-                        ? 'bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-500 hover:to-amber-500 text-white shadow-lg shadow-amber-900/30' 
-                        : 'bg-green-500 active:bg-green-600 hover:bg-green-400 text-slate-900'
-                    }`}
-                  >
-                    {isOfficial ? (
-                      <>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        查看详情
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                        立即回应
-                      </>
-                    )}
-                  </button>
-                )}
+                <div className="h-6 w-3/4 bg-slate-700 rounded mb-3"></div>
+                <div className="h-10 w-full bg-slate-700/50 rounded-lg mt-auto"></div>
               </div>
-            )
-          })}
-          {filteredTasks.length === 0 && (
-            <div className="col-span-full text-center text-slate-500 py-12">
-              <div className="text-4xl mb-2">🍃</div>
-              <p>{activeTab !== 'ALL' ? `${GAME_CONFIG[activeTab]?.label} 区暂无搭子` : '暂无任务'}</p>
-              <button onClick={() => setShowPostModal(true)} className="text-blue-400 font-bold mt-2 hover:underline">
-                做第一个发布的人
-              </button>
-            </div>
+            ))
+          ) : (
+            <>
+              {filteredTasks.map(task => {
+                const timeLeft = Math.max(0, Math.floor((task.expiresAt - now) / 1000));
+                if (timeLeft === 0) return null;
+
+                const isMyTask = !!myTasks[task.id];
+                const isOfficial = task.isOfficial;
+                const config = GAME_CONFIG[task.tag] || GAME_CONFIG['GENERAL']; 
+
+                return (
+                  <div key={task.id} className={`bg-slate-800 rounded-xl p-4 shadow-lg relative overflow-hidden border-l-4 flex flex-col ${isOfficial ? 'border-yellow-400 bg-slate-800/80 shadow-yellow-900/20' : isMyTask ? 'border-blue-400' : 'border-slate-600'} hover:bg-slate-750 transition-colors`}>
+                    
+                    {/* 标签栏 */}
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${isOfficial ? 'text-yellow-400 border-yellow-400' : config.color || 'text-slate-400 border-slate-400'}`}>
+                        {config.label}
+                      </span>
+                      {task.attributes && task.attributes.slice(0, 2).map(attr => (
+                        <span key={attr} className={`text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap ${isOfficial ? 'bg-yellow-500/20 text-yellow-300' : 'bg-slate-700 text-slate-300'}`}>
+                          {attr}
+                        </span>
+                      ))}
+                      {task.attributes && task.attributes.length > 2 && (
+                        <span className="text-[10px] text-slate-500 px-1 py-0.5">+{task.attributes.length - 2}</span>
+                      )}
+                      <div className="flex-1"></div>
+                      <span className={`text-xs px-2 py-0.5 rounded font-mono whitespace-nowrap ${isOfficial ? 'bg-yellow-500/20 text-yellow-400' : timeLeft < 60 ? 'bg-red-500/20 text-red-400 animate-pulse' : 'bg-slate-900/50 text-slate-500'}`}>
+                        {isOfficial ? '置顶' : `${Math.floor(timeLeft / 60)}:${String(timeLeft % 60).padStart(2, '0')}`}
+                      </span>
+                    </div>
+
+                    <h3 className={`font-bold text-lg mb-3 break-words flex-grow leading-tight ${isOfficial ? 'text-yellow-100' : 'text-white'}`}>{task.title}</h3>
+                    
+                    {isMyTask ? (
+                      <div className="flex gap-2 mt-auto">
+                        <button 
+                          onClick={() => renewTask(task.id)}
+                          className="flex-1 bg-blue-500 active:bg-blue-600 hover:bg-blue-400 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 text-sm"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                          续命
+                        </button>
+                        <button 
+                          onClick={() => cancelTask(task.id)}
+                          className="px-3 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          撤回
+                        </button>
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={() => grabTask(task.id)}
+                        className={`w-full font-bold py-2 rounded-lg mt-auto transition-colors flex items-center justify-center gap-2 ${
+                          isOfficial 
+                            ? 'bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-500 hover:to-amber-500 text-white shadow-lg shadow-amber-900/30' 
+                            : 'bg-green-500 active:bg-green-600 hover:bg-green-400 text-slate-900'
+                        }`}
+                      >
+                        {isOfficial ? (
+                          <>
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            查看详情
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                            立即回应
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+              {filteredTasks.length === 0 && (
+                <div className="col-span-full text-center text-slate-500 py-12 animate-fade-in">
+                  <div className="text-4xl mb-2">🍃</div>
+                  <p>{activeTab !== 'ALL' ? `${GAME_CONFIG[activeTab]?.label} 区暂无搭子` : '暂无任务'}</p>
+                  <button onClick={() => setShowPostModal(true)} className="text-blue-400 font-bold mt-2 hover:underline">
+                    做第一个发布的人
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
