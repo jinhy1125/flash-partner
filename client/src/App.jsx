@@ -11,12 +11,16 @@ const socket = io(BACKEND_URL);
 function App() {
   const [tasks, setTasks] = useState([]);
   
-  const [form, setForm] = useState({ 
+  const [form, setForm] = useState(() => ({ 
     title: '', 
-    contact: '', 
+    contact: localStorage.getItem('saved_contact') || '', 
     tag: 'LOL', 
     attributes: [] 
-  });
+  }));
+
+  useEffect(() => {
+    localStorage.setItem('saved_contact', form.contact);
+  }, [form.contact]);
   
   const [isPublishing, setIsPublishing] = useState(false); 
   
@@ -101,7 +105,7 @@ function App() {
 
       const res = await axios.post(`${BACKEND_URL}/api/post`, form);
       if (res.data.success) {
-        setForm(prev => ({ ...prev, title: '', contact: '', attributes: [] }));
+        setForm(prev => ({ ...prev, title: '', attributes: [] }));
         setShowPostModal(false); 
         setMyTasks({ [res.data.id]: res.data.ownerToken });
       }
