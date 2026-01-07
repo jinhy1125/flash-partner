@@ -38,15 +38,65 @@ const ActiveTaskSchema = new mongoose.Schema({
   ownerToken: String,
   tag: String,      // 新增：游戏/分类 Key
   attributes: [String], // 新增：属性数组
+  isOfficial: { type: Boolean, default: false }, // 新增：是否官方任务
   createdAt: Number, 
   expiresAt: Number  
 });
 const ActiveTask = mongoose.model('ActiveTask', ActiveTaskSchema);
 
+// === 官方任务配置 ===
+const OFFICIAL_TASKS = [
+  {
+    id: 'official_001',
+    title: '📢 咔哒官方反馈 & 交流群',
+    contact: '加V: away_y_y (备注进群)',
+    tag: 'GENERAL',
+    attributes: ['官方', '置顶', '长期有效'],
+    isOfficial: true,
+    createdAt: Date.now(),
+    expiresAt: 9999999999999 // 永不过期
+  },
+  {
+    id: 'official_002',
+    title: '💡 没找到搭子？试试发布一个！',
+    contact: '点击右下角“找搭子”按钮发布',
+    tag: 'GENERAL',
+    attributes: ['小贴士'],
+    isOfficial: true,
+    createdAt: Date.now(),
+    expiresAt: 9999999999999
+  }
+];
+
 // === 内存数据库 ===
 // 结构: { id: { data, timer, ownerToken } }
 const memoryDb = {}; 
 const DEFAULT_TTL = 900; // 15分钟
+
+// 确保官方任务存在
+const ensureOfficialTasks = async () => {
+  const now = Date.now();
+  
+  for (const task of OFFICIAL_TASKS) {
+    // 1. 放入内存
+    if (!memoryDb[task.id]) {
+      memoryDb[task.id] = {
+        data: task,
+        ownerToken: 'OFFICIAL_TOKEN', // 特殊 token
+        timer: null // 官方任务没有定时器
+      };
+    }
+
+    // 2. 放入数据库 (如果连接了 Mongo 且不存在)
+    if (mongoose.connection.readyState === 1) {
+      const exists = await ActiveTask.findOne({ id: task.id });
+      if (!exists) {
+        await ActiveTask.create({ ...task, ownerToken: 'OFFICIAL_TOKEN' });
+        console.log(`初始化官方任务: ${task.title}`);
+      }
+    }
+  }
+};
 
 // --- 从 MongoDB 恢复数据 ---
 const restoreFromMongo = async () => {
@@ -58,6 +108,25 @@ const restoreFromMongo = async () => {
     let restoredCount = 0;
 
     tasks.forEach(task => {
+      // 特殊处理官方任务
+      if (task.isOfficial) {
+         memoryDb[task.id] = {
+            data: {
+              id: task.id,
+              title: task.title,
+              contact: task.contact,
+              tag: task.tag,
+              attributes: task.attributes,
+              isOfficial: true,
+              createdAt: task.createdAt,
+              expiresAt: task.expiresAt
+            },
+            ownerToken: task.ownerToken,
+            timer: null
+         };
+         return;
+      }
+
       // 检查是否过期
       if (task.expiresAt <= now) {
         // 已过期，从库里删掉
@@ -95,9 +164,11 @@ const restoreFromMongo = async () => {
 // 抽离过期处理逻辑
 const handleExpire = (id) => {
   if (memoryDb[id]) {
+    // 官方任务永不过期
+    if (memoryDb[id].data.isOfficial) return;
+
     delete memoryDb[id];
     io.emit('remove_task', id); // 广播过期
-    console.log(`任务 ${id} 自然过期`);
     
     // 同步从 Mongo 删除
     if (mongoose.connection.readyState === 1) {
@@ -112,8 +183,12 @@ if (process.env.MONGO_URI) {
     .then(() => {
       console.log('MongoDB Connected');
       restoreFromMongo();
+      ensureOfficialTasks();
     })
     .catch(err => console.error('Mongo Error:', err));
+} else {
+  // 即使没有 Mongo，也要加载内存版官方任务
+  ensureOfficialTasks();
 }
 
 io.on('connection', (socket) => {
@@ -271,6 +346,11 @@ app.post('/api/grab', async (req, res) => {
   clearTimeout(record.timer); 
   const realContact = data.contact; 
   
+  // 官方任务不删除，直接返回
+  if (data.isOfficial) {
+    return res.json({ success: true, contact: realContact });
+  }
+
   delete memoryDb[taskId]; 
   
   // 从 MongoDB 删除

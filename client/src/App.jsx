@@ -332,18 +332,19 @@ function App() {
             if (timeLeft === 0) return null;
 
             const isMyTask = !!myTasks[task.id];
+            const isOfficial = task.isOfficial;
             const config = GAME_CONFIG[task.tag] || GAME_CONFIG['GENERAL']; 
 
             return (
-              <div key={task.id} className={`bg-slate-800 rounded-xl p-4 shadow-lg relative overflow-hidden border-l-4 flex flex-col ${isMyTask ? 'border-yellow-400' : 'border-slate-600'} hover:bg-slate-750 transition-colors`}>
+              <div key={task.id} className={`bg-slate-800 rounded-xl p-4 shadow-lg relative overflow-hidden border-l-4 flex flex-col ${isOfficial ? 'border-yellow-400 bg-slate-800/80 shadow-yellow-900/20' : isMyTask ? 'border-blue-400' : 'border-slate-600'} hover:bg-slate-750 transition-colors`}>
                 
                 {/* 标签栏 */}
                 <div className="flex flex-wrap gap-2 mb-3">
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${config.color || 'text-slate-400 border-slate-400'}`}>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${isOfficial ? 'text-yellow-400 border-yellow-400' : config.color || 'text-slate-400 border-slate-400'}`}>
                     {config.label}
                   </span>
                   {task.attributes && task.attributes.slice(0, 2).map(attr => (
-                    <span key={attr} className="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded whitespace-nowrap">
+                    <span key={attr} className={`text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap ${isOfficial ? 'bg-yellow-500/20 text-yellow-300' : 'bg-slate-700 text-slate-300'}`}>
                       {attr}
                     </span>
                   ))}
@@ -351,18 +352,18 @@ function App() {
                     <span className="text-[10px] text-slate-500 px-1 py-0.5">+{task.attributes.length - 2}</span>
                   )}
                   <div className="flex-1"></div>
-                  <span className={`text-xs px-2 py-0.5 rounded font-mono whitespace-nowrap ${timeLeft < 60 ? 'bg-red-500/20 text-red-400 animate-pulse' : 'bg-slate-900/50 text-slate-500'}`}>
-                    {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
+                  <span className={`text-xs px-2 py-0.5 rounded font-mono whitespace-nowrap ${isOfficial ? 'bg-yellow-500/20 text-yellow-400' : timeLeft < 60 ? 'bg-red-500/20 text-red-400 animate-pulse' : 'bg-slate-900/50 text-slate-500'}`}>
+                    {isOfficial ? '置顶' : `${Math.floor(timeLeft / 60)}:${String(timeLeft % 60).padStart(2, '0')}`}
                   </span>
                 </div>
 
-                <h3 className="font-bold text-lg text-white mb-3 break-words flex-grow leading-tight">{task.title}</h3>
+                <h3 className={`font-bold text-lg mb-3 break-words flex-grow leading-tight ${isOfficial ? 'text-yellow-100' : 'text-white'}`}>{task.title}</h3>
                 
                 {isMyTask ? (
                   <div className="flex gap-2 mt-auto">
                     <button 
                       onClick={() => renewTask(task.id)}
-                      className="flex-1 bg-yellow-500 active:bg-yellow-600 hover:bg-yellow-400 text-slate-900 font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 text-sm"
+                      className="flex-1 bg-blue-500 active:bg-blue-600 hover:bg-blue-400 text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 text-sm"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                       续命
@@ -377,10 +378,23 @@ function App() {
                 ) : (
                   <button 
                     onClick={() => grabTask(task.id)}
-                    className="w-full bg-green-500 active:bg-green-600 hover:bg-green-400 text-slate-900 font-bold py-2 rounded-lg mt-auto transition-colors flex items-center justify-center gap-2"
+                    className={`w-full font-bold py-2 rounded-lg mt-auto transition-colors flex items-center justify-center gap-2 ${
+                      isOfficial 
+                        ? 'bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-500 hover:to-amber-500 text-white shadow-lg shadow-amber-900/30' 
+                        : 'bg-green-500 active:bg-green-600 hover:bg-green-400 text-slate-900'
+                    }`}
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                    立即回应
+                    {isOfficial ? (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        查看详情
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                        立即回应
+                      </>
+                    )}
                   </button>
                 )}
               </div>
