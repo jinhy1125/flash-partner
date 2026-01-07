@@ -156,12 +156,58 @@ function App() {
 
   const handleCopy = () => {
     if (!grabResult) return;
+    // 如果是图片，不执行复制文字
+    if (grabResult.startsWith('data:image/')) {
+      alert("请长按图片保存或识别二维码");
+      return;
+    }
     navigator.clipboard.writeText(grabResult).then(() => {
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
     }).catch(err => {
       alert("复制失败，请手动长按复制");
     });
+  };
+
+  // 处理图片压缩和转换
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 300;
+        const MAX_HEIGHT = 300;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // 压缩并转换
+        const base64 = canvas.toDataURL('image/jpeg', 0.7); 
+        setForm(prev => ({ ...prev, contact: base64 }));
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
   };
 
   const filteredTasks = tasks.filter(task => {
@@ -509,13 +555,38 @@ function App() {
                     onChange={e => setForm({...form, title: e.target.value})}
                   />
                 </div>
-                <div>
-                  <input 
-                    className="w-full p-3 bg-slate-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="联系方式 (例: V: xxx)" 
-                    value={form.contact}
-                    onChange={e => setForm({...form, contact: e.target.value})}
-                  />
+                <div className="space-y-2">
+                  <div className="relative">
+                    {form.contact.startsWith('data:image/') ? (
+                      <div className="relative group">
+                        <img 
+                          src={form.contact} 
+                          className="w-20 h-20 rounded-lg border-2 border-blue-500 mx-auto object-cover" 
+                          alt="QR Preview" 
+                        />
+                        <button 
+                          onClick={() => setForm(prev => ({ ...prev, contact: '' }))}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-lg"
+                        >✕</button>
+                        <p className="text-[10px] text-center text-blue-400 mt-1 font-bold">已选择二维码图片</p>
+                      </div>
+                    ) : (
+                      <input 
+                        className="w-full p-3 bg-slate-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="联系方式 (例: V: xxx)" 
+                        value={form.contact}
+                        onChange={e => setForm({...form, contact: e.target.value})}
+                      />
+                    )}
+                  </div>
+                  
+                  <div className="flex justify-center">
+                    <label className="cursor-pointer flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-full text-xs font-bold text-slate-300 transition-colors border border-slate-600">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                      {form.contact.startsWith('data:image/') ? '更换二维码' : '上传二维码图片'}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                    </label>
+                  </div>
                 </div>
               </div>
 
@@ -599,9 +670,26 @@ function App() {
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in">
           <div className="bg-slate-800 rounded-2xl w-full max-w-sm border border-green-500/50 shadow-2xl p-6 text-center space-y-6">
             <h2 className="text-2xl font-black text-white">🎉 抢单成功！</h2>
-            <div className="bg-black/40 p-4 rounded-lg border border-slate-700 text-green-400 font-mono font-bold select-all break-all">{grabResult}</div>
+            
+            {grabResult.startsWith('data:image/') ? (
+              <div className="bg-white p-4 rounded-xl shadow-inner inline-block mx-auto">
+                <img 
+                  src={grabResult} 
+                  className="w-48 h-48 object-contain" 
+                  alt="Contact QR" 
+                />
+                <p className="text-slate-900 text-xs mt-2 font-bold">请长按图片保存或扫码</p>
+              </div>
+            ) : (
+              <div className="bg-black/40 p-4 rounded-lg border border-slate-700 text-green-400 font-mono font-bold select-all break-all">
+                {grabResult}
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
-              <button onClick={handleCopy} className={`col-span-2 py-3 rounded-xl font-bold text-slate-900 ${isCopied ? 'bg-green-400' : 'bg-white'}`}>{isCopied ? '已复制' : '一键复制'}</button>
+              {!grabResult.startsWith('data:image/') && (
+                <button onClick={handleCopy} className={`col-span-2 py-3 rounded-xl font-bold text-slate-900 ${isCopied ? 'bg-green-400' : 'bg-white'}`}>{isCopied ? '已复制' : '一键复制'}</button>
+              )}
               <button onClick={() => setGrabResult(null)} className="col-span-2 py-3 text-slate-400 hover:text-white">关闭</button>
             </div>
           </div>
